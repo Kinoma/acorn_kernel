@@ -420,7 +420,10 @@ static MV_STATUS mv_eth_nfp_tx(struct eth_pbuf *pkt, MV_NFP_RESULT *res)
 	}
 
 #ifdef CONFIG_MV_ETH_BM_CPU
-	use_bm = 1;
+	if (MV_NETA_BM_CAP())
+		use_bm = 1;
+	else
+		use_bm = 0;
 #else
 	use_bm = 0;
 #endif /* CONFIG_MV_ETH_BM_CPU */
@@ -935,7 +938,8 @@ static MV_STATUS mv_eth_nfp_ext_rxd_build(struct sk_buff *skb, MV_EXT_PKT_INFO *
 	}
 
 #ifndef CONFIG_MV_ETH_PNC
-	rxd->status |= ETH_RX_NOT_LLC_SNAP_FORMAT_MASK;
+	if (MV_NETA_PNC_CAP())
+		rxd->status |= ETH_RX_NOT_LLC_SNAP_FORMAT_MASK;
 #endif /* CONFIG_MV_ETH_PNC */
 
 	NETA_RX_SET_IPHDR_OFFSET(rxd, ETH_HLEN + MV_ETH_MH_SIZE + ofs);
