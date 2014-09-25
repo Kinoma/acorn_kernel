@@ -480,7 +480,7 @@ static MV_STATUS mv_eth_nfp_tx(struct eth_pbuf *pkt, MV_NFP_RESULT *res)
 	STAT_DBG(txq_ctrl->stats.txq_tx++);
 
 out:
-#ifndef CONFIG_MV_ETH_TXDONE_ISR
+#ifndef CONFIG_MV_NETA_TXDONE_ISR
 	if (txq_ctrl->txq_count >= mv_ctrl_txdone) {
 		u32 tx_done = mv_eth_txq_done(pp, txq_ctrl);
 
@@ -490,7 +490,7 @@ out:
 	if ((txq_ctrl->txq_count == frags) && (frags > 0))
 		mv_eth_add_tx_done_timer(pp->cpu_config[smp_processor_id()]);
 
-#endif /* CONFIG_MV_ETH_TXDONE_ISR */
+#endif /* CONFIG_MV_NETA_TXDONE_ISR */
 
 	if (txq_ctrl->flags & MV_ETH_F_TX_SHARED)
 		spin_unlock(&txq_ctrl->queue_lock);
