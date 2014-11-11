@@ -243,19 +243,23 @@ int mv_eth_cmdline_port3_config(char *s)
 }
 void mv_eth_stack_print(int port, MV_BOOL isPrintElements)
 {
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 
+	if (mvNetaPortCheck(port))
+		return;
+
+	pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_INFO "%s: Invalid port [%d]\n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return;
 	}
 
 	if (pp->pool_long == NULL) {
-		printk(KERN_ERR "%s: Error - long pool is null\n", __func__);
+		pr_err("%s: Error - long pool is null\n", __func__);
 		return;
 	}
 
-	printk(KERN_INFO "Long pool (%d) stack\n", pp->pool_long->pool);
+	pr_info("Long pool (%d) stack\n", pp->pool_long->pool);
 	mvStackStatus(pp->pool_long->stack, isPrintElements);
 
 #ifdef CONFIG_MV_ETH_BM_CPU
@@ -318,7 +322,16 @@ static void mv_eth_adaptive_rx_update(struct eth_port *pp)
 
 static int mv_eth_tag_type_set(int port, int type)
 {
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
+
+	if (mvNetaPortCheck(port))
+		return -EINVAL;
+
+	pp = mv_eth_port_by_id(port);
+	if (pp == NULL) {
+		pr_err("Port %d does not exist\n", port);
+		return -EINVAL;
+	}
 
 	if ((type == MV_TAG_TYPE_MH) || (type == MV_TAG_TYPE_DSA) || (type == MV_TAG_TYPE_EDSA))
 		mvNetaMhSet(port, type);
@@ -438,7 +451,7 @@ static int mv_eth_port_config_parse(struct eth_port *pp)
 
 	printk(KERN_ERR "\n");
 	if (pp == NULL) {
-		printk(KERN_ERR "  o mv_eth_port_config_parse: got NULL pp\n");
+		pr_err("Port %d does not exist\n", pp->port);
 		return -1;
 	}
 
@@ -592,7 +605,7 @@ int mv_eth_ctrl_port_buf_num_set(int port, int long_num, int short_num)
 	struct eth_port *pp = mv_eth_port_by_id(port);
 
 	if (pp == NULL) {
-		printk(KERN_INFO "port doens not exist (%d) in %s\n" , port, __func__);
+		pr_err("Port %d does not exist\n", port);
 		return -EINVAL;
 	}
 
@@ -692,7 +705,7 @@ int mv_eth_ctrl_set_poll_rx_weight(int port, u32 weight)
 	int cpu;
 
 	if (pp == NULL) {
-		printk(KERN_INFO "port doens not exist (%d) in %s\n" , port, __func__);
+		pr_err("Port %d does not exist\n", port);
 		return -EINVAL;
 	}
 
@@ -891,13 +904,14 @@ int mv_eth_shared_set(int port, int txp, int txq, int value)
 {
 	struct tx_queue *txq_ctrl;
 	struct eth_port *pp = mv_eth_port_by_id(port);
+
 	if ((value < 0) || (value > 1)) {
-		printk(KERN_ERR "%s:Invalid value %d , should be 0 or 1.\n \n", __func__, value);
+		pr_err("%s: Invalid value %d, should be 0 or 1\n", __func__, value);
 		return -EINVAL;
 	}
 
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: pp is null \n", __func__);
+		pr_err("Port %d does not exist\n", port);
 		return -EINVAL;
 	}
 
@@ -922,10 +936,10 @@ int mv_eth_shared_set(int port, int txp, int txq, int value)
 int mv_eth_ctrl_txq_cpu_def(int port, int txp, int txq, int cpu)
 {
 	struct cpu_ctrl	*cpuCtrl;
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 
 	if ((cpu >= nr_cpu_ids) || (cpu < 0)) {
-		printk(KERN_ERR "cpu #%d is out of range: from 0 to %d\n",
+		pr_err("cpu #%d is out of range: from 0 to %d\n",
 			cpu, nr_cpu_ids - 1);
 		return -EINVAL;
 	}
@@ -933,9 +947,11 @@ int mv_eth_ctrl_txq_cpu_def(int port, int txp, int txq, int cpu)
 	if (mvNetaTxpCheck(port, txp))
 		return -EINVAL;
 
-	if ((pp == NULL) || (pp->txq_ctrl == NULL))
+	pp = mv_eth_port_by_id(port);
+	if ((pp == NULL) || (pp->txq_ctrl == NULL)) {
+		pr_err("Port %d does not exist\n", port);
 		return -ENODEV;
-
+	}
 	cpuCtrl = pp->cpu_config[cpu];
 
 	/* Check that new txq can be allocated for CPU */
@@ -980,7 +996,7 @@ int	mv_eth_cpu_txq_mask_set(int port, int cpu, int txqMask)
 		return -EINVAL;
 	}
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: pp is null \n", __func__);
+		pr_err("Port %d does not exist\n", port);
 		return MV_FAIL;
 	}
 
@@ -2982,8 +2998,10 @@ int mv_eth_hwf_ctrl(int port, MV_BOOL enable)
 		return -EINVAL;
 
 	pp = mv_eth_port_by_id(port);
-	if (pp == NULL)
+	if (pp == NULL) {
+		pr_err("Port %d does not exist\n", port);
 		return -ENODEV;
+	}
 
 	for (txp = 0; txp < pp->txp_num; txp++) {
 		for (txq = 0; txq < CONFIG_MV_ETH_TXQ; txq++) {
@@ -3694,7 +3712,7 @@ int mv_eth_port_resume(int port)
 	pp = mv_eth_port_by_id(port);
 
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: pp == NULL, port=%d\n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return  MV_ERROR;
 	}
 
@@ -4109,7 +4127,7 @@ int	mv_eth_wol_mode_set(int port, int mode)
 	struct eth_port *pp = mv_eth_port_by_id(port);
 
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: pp == NULL, port=%d\n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return -EINVAL;
 	}
 
@@ -5027,7 +5045,7 @@ int mv_eth_napi_set_cpu_affinity(int port, int group, int affinity)
 {
 	struct eth_port *pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: pp == NULL, port=%d\n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return -1;
 	}
 
@@ -5107,7 +5125,7 @@ void mv_eth_napi_group_show(int port)
 	struct eth_port *pp = mv_eth_port_by_id(port);
 
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: pp == NULL\n", __func__);
+		pr_err("Port %d does not exist\n", port);
 		return;
 	}
 	for (group = 0; group < CONFIG_MV_ETH_NAPI_GROUPS; group++) {
@@ -5315,8 +5333,17 @@ static void mv_eth_txq_delete(struct eth_port *pp, struct tx_queue *txq_ctrl)
 /* Free all packets pending transmit from all TXQs and reset TX port */
 int mv_eth_txp_reset(int port, int txp)
 {
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 	int queue;
+
+	if (mvNetaTxpCheck(port, txp))
+		return -EINVAL;
+
+	pp = mv_eth_port_by_id(port);
+	if (pp == NULL) {
+		pr_err("Port %d does not exist\n", port);
+		return -ENODEV;
+	}
 
 	if (pp->flags & MV_ETH_F_STARTED) {
 		printk(KERN_ERR "Port %d must be stopped before\n", port);
@@ -6011,7 +6038,7 @@ static void mv_eth_tx_done_timer_callback(unsigned long data)
 	if (tx_todo > 0)
 		mv_eth_add_tx_done_timer(cpuCtrl);
 }
-#endif
+#endif /* !CONFIG_MV_NETA_TXDONE_ISR */
 
 /***********************************************************
  * mv_eth_cleanup_timer_callback --			   *
@@ -6041,10 +6068,14 @@ static void mv_eth_cleanup_timer_callback(unsigned long data)
 
 void mv_eth_mac_show(int port)
 {
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 
+	if (mvNetaPortCheck(port))
+		return;
+
+	pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return;
 	}
 
@@ -6067,10 +6098,14 @@ void mv_eth_mac_show(int port)
 
 void mv_eth_vlan_prio_show(int port)
 {
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 
+	if (mvNetaPortCheck(port))
+		return;
+
+	pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return;
 	}
 
@@ -6111,10 +6146,14 @@ void mv_eth_tos_map_show(int port)
 {
 	int tos, txq, cpu;
 	struct cpu_ctrl *cpuCtrl;
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 
+	if (mvNetaPortCheck(port))
+		return;
+
+	pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return;
 	}
 
@@ -6162,10 +6201,14 @@ void mv_eth_tos_map_show(int port)
 int mv_eth_rxq_tos_map_set(int port, int rxq, unsigned char tos)
 {
 	int status = -1;
-	struct eth_port *pp = mv_eth_port_by_id(port);
+	struct eth_port *pp;
 
+	if (mvNetaPortCheck(port))
+		return -EINVAL;
+
+	pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_ERR "%s: port %d entry is null \n", __func__, port);
+		pr_err("Port %d does not exist\n", port);
 		return 1;
 	}
 
@@ -6229,9 +6272,10 @@ int mv_eth_txq_tos_map_set(int port, int txq, int cpu, unsigned int tos)
 	if (mvNetaPortCheck(port))
 		return -EINVAL;
 
-	if ((pp == NULL) || (pp->txq_ctrl == NULL))
+	if ((pp == NULL) || (pp->txq_ctrl == NULL)) {
+		pr_err("Port %d does not exist\n", port);
 		return -ENODEV;
-
+	}
 	if ((cpu >= nr_cpu_ids) || (cpu < 0)) {
 		printk(KERN_ERR "cpu #%d is out of range: from 0 to %d\n",
 			cpu, nr_cpu_ids - 1);
@@ -6700,7 +6744,7 @@ void mv_eth_port_stats_print(unsigned int port)
 	pr_info("----------------------------------------------------\n\n");
 
 	if (pp == NULL) {
-		printk(KERN_ERR "eth_stats_print: wrong port number %d\n", port);
+		pr_err("Port %d does not exist\n", port);
 		return;
 	}
 	stat = &(pp->stats);
@@ -6897,9 +6941,10 @@ static int mv_eth_port_cleanup(int port)
 	struct rx_queue *rxq_ctrl;
 
 	pp = mv_eth_port_by_id(port);
-
-	if (pp == NULL)
+	if (pp == NULL) {
+		pr_err("Port %d does not exist\n", port);
 		return -1;
+	}
 
 	if (pp->flags & MV_ETH_F_STARTED) {
 		printk(KERN_ERR "%s: port %d is started, cannot cleanup\n", __func__, port);
@@ -7101,7 +7146,7 @@ int mv_eth_wol_sleep(int port)
 
 	pp = mv_eth_port_by_id(port);
 	if (pp == NULL) {
-		printk(KERN_INFO "Failed to fined pp struct on port #%d\n", port);
+		pr_err("Port %d does not exist\n", port);
 		return 1;
 	}
 
@@ -7276,7 +7321,7 @@ static int mv_eth_remove(struct platform_device *pdev)
 
 	printk(KERN_INFO "Removing Marvell Ethernet Driver - port #%d\n", port);
 	if (pp == NULL)
-		printk(KERN_ERR "Not Found\n");
+		pr_err("Port %d does not exist\n", port);
 
 	mv_eth_priv_cleanup(pp);
 
