@@ -80,7 +80,7 @@ int mv_eth_start(struct net_device *dev)
 	}
 	if (priv->flags & MV_ETH_F_CONNECT_LINUX) {
 		/* connect to port interrupt line */
-		if (request_irq(dev->irq, mv_eth_isr, (IRQF_DISABLED), "mv_eth", priv)) {
+		if (request_irq(dev->irq, mv_eth_isr, (IRQF_DISABLED), dev->name, priv)) {
 			printk(KERN_ERR "cannot request irq %d for %s port %d\n", dev->irq, dev->name, priv->port);
 			if (priv->flags & MV_ETH_F_CONNECT_LINUX)
 				napi_disable(priv->napiGroup[CPU_GROUP_DEF]);
