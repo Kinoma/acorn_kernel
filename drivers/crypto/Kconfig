@@ -182,7 +182,6 @@ config MV_INCLUDE_CESA
 	  Security Accelerators found in the Marvell Armada SoC devices.
 
 if MV_INCLUDE_CESA = "y"
-	source "drivers/crypto/mvebu_cesa/Kconfig"
 endif
 
 config CRYPTO_DEV_NIAGARA2

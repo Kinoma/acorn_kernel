@@ -437,7 +437,6 @@ config MTD_NAND_MVEBU_NFC
 	  the Marvell Armada SoC devices.
 
 if MTD_NAND_MVEBU_NFC = “y”
-	source “drivers/mtd/nand/mvebu_nfc/Kconfig”
 endif
 
 config MTD_NAND_PLATFORM
