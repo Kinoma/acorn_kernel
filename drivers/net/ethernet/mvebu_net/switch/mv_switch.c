@@ -209,7 +209,6 @@ bool mv_switch_tag_get(int db, MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE prese
 		return MV_FALSE;
 
 	tag->tag_type = tag_mode;
-printk("preset2=%d\n",preset);
 	if (preset == MV_PRESET_SINGLE_VLAN) {
 		if (tag_mode == MV_TAG_TYPE_MH) {
 			tag->rx_tag_ptrn.mh = MV_16BIT_BE(vid << 12);
@@ -1131,7 +1130,6 @@ int mv_switch_preset_init(MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE preset, in
 		}
 	}
 	SWITCH_DBG(SWITCH_DBG_LOAD, ("\n"));
-printk("preset1=%dn",preset);
 	/* split ports to vlans according to preset */
 	if (preset == MV_PRESET_SINGLE_VLAN) {
 		mv_switch_vlan_set(MV_SWITCH_GROUP_VLAN_ID(vid), switch_ports_mask);
