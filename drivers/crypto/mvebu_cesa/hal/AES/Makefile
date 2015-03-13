@@ -13,11 +13,7 @@ MV_DEFINE = -DMV_LINUX -DMV_CPU_$(ENDIAN) -DMV_$(CPU_ARCH)
 
 CESA_DIR	:= drivers/crypto/mvebu_cesa
 
-obj-y += cesa_if.o cesa_ocf_drv.o cesa_test.o
-
-obj-$(CONFIG_MV_CESA_TOOL) += cesa_dev.o
-
-obj-y += hal/
+obj-y += mvAesAlg.o mvAesApi.o
 
 EXTRA_INCLUDE	=  -I$(CESA_DIR)
 EXTRA_INCLUDE	+= -I$(srctree)/arch/arm/mach-mvebu/include/mach

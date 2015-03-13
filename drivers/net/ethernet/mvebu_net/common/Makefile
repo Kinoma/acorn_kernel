@@ -31,19 +31,13 @@ INCLUDE_DIRS   += -I$(PLAT_DIR)/$(QD_DIR)/Include/h/platform
 endif
 export INCLUDE_DIRS
 
-ccflags-y       += $(INCLUDE_DIRS)
-
-ifeq ($(CONFIG_ARCH_AVANTA_LP),y)
-
-obj-$(CONFIG_MV_INCLUDE_SWITCH)	+= mv_switch.o mv_switch_sysfs.o mv_phy.o
-
-else
 ifeq ($(CONFIG_MV_INCLUDE_SWITCH),y)
-obj-$(CONFIG_MV_INCLUDE_SWITCH)	+= mv_switch.o mv_switch_sysfs.o
-endif	# CONFIG_MV_INCLUDE_SWITCH
-
-ifeq ($(CONFIG_MV_INCLUDE_SWITCH),y)
-obj-$(CONFIG_MV_INCLUDE_SWITCH)	+= mv_switch.o mv_switch_sysfs.o mv_phy.o
+QD_DIR:= switch/qd-dsdt-3.3
+export QD-DIR
 endif
 
-endif # CONFIG_ARCH_AVANTA_LP
+ccflags-y	+= $(INCLUDE_DIRS)
+
+obj-y	+= mvCommon.o mvStack.o mvDebug.o
+
+obj-$(CONFIG_MV_ETH_PP2_1) += mvList.o
