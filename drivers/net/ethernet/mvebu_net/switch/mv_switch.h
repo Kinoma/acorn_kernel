@@ -47,6 +47,8 @@ disclaimer.
 #define MV_SWITCH_DEFAULT_WEIGHT		(2)	/* Switch default queue weight		*/
 /*TPM end*/
 
+#define MV_SWITCH_SOHO_NAME	"mv_switch"
+
 #define MV_SWITCH_PHY_ACCESS			1
 #define MV_SWITCH_PORT_ACCESS			2
 #define MV_SWITCH_GLOBAL_ACCESS			3
@@ -124,6 +126,29 @@ enum sw_port_state_t {
 
 /*TPM end*/
 #endif
+
+struct mv_switch_pdata {
+
+	int index;
+	int phy_addr;
+	int gbe_port;
+	int switch_cpu_port;
+	MV_TAG_TYPE tag_mode;
+        MV_SWITCH_PRESET_TYPE preset;
+	int vid;
+	int port_mask;
+	int connected_port_mask;
+	int forced_link_port_mask;
+	int mtu;
+	int smi_scan_mode;
+	int qsgmii_module;
+	int gephy_on_port;
+	int rgmiia_on_port;
+	int switch_irq;
+	int is_speed_2000;
+};
+
+
 /*unsigned int	mv_switch_link_detection_init(struct mv_switch_pdata *plat_data);*/
 void mv_switch_interrupt_mask(void);
 void mv_switch_interrupt_unmask(void);
@@ -148,8 +173,17 @@ int     mv_switch_ptp_reg_read(int port, int reg, MV_U16 *value);
 int     mv_switch_ptp_reg_write(int port, int reg, MV_U16 value);
 #endif
 
+char *mv_str_speed_state(int port);
+char *mv_str_duplex_state(int port);
+char *mv_str_link_state(int port);
+void	mv_switch_atu_print(void);
 void    mv_switch_stats_print(void);
 void    mv_switch_status_print(void);
+
+int mv_switch_port_power_set(int port, int updown);
+int mv_switch_port_power_get(int port);
+size_t mv_switch_get_peer_count(void);
+size_t mv_switch_get_peer_mac_addresses(uint8_t mac_addresses[][6], size_t count, int port);
 
 int     mv_switch_all_multicasts_del(int db_num);
 

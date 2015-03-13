@@ -2136,6 +2136,42 @@ GT_STATUS gprtGetPortPowerDown
 );
 
 /*******************************************************************************
+* gprtPortPowerSet
+*
+* DESCRIPTION:
+*       This routine resets port disables/enables port power
+*
+* INPUTS:
+*       port  - the logical port number.
+*       onoff - 0 port power down, otherwise port power up
+*
+* OUTPUTS:
+*       None.
+*
+* RETURNS:
+*       GT_OK   - on success
+*       GT_FAIL - on error
+*
+* COMMENTS:
+*
+*
+* GalTis:
+*
+*******************************************************************************/
+GT_STATUS gprtPortPowerSet
+(
+	IN GT_QD_DEV  * dev,
+	IN GT_LPORT   port,
+	IN GT_BOOL    onoff
+);
+
+GT_STATUS gprtPortPowerGet
+(
+	IN GT_QD_DEV  * dev,
+	IN GT_LPORT   port
+);
+
+/*******************************************************************************
 * gprtPortRestartAutoNeg
 *
 * DESCRIPTION:

@@ -1385,6 +1385,100 @@ GT_STATUS gprtGetPortPowerDown
 }
 
 /*******************************************************************************
+* gprtPortPowerSet
+*
+* DESCRIPTION:
+*       This routine resets port disables/enables port power
+*
+* INPUTS:
+*       port  - the logical port number.
+*       onoff - 0 port power down, otherwise port power up
+*
+* OUTPUTS:
+*       None.
+*
+* RETURNS:
+*       GT_OK   - on success
+*       GT_FAIL - on error
+*
+* COMMENTS:
+*
+*
+* GalTis:
+*
+*******************************************************************************/
+GT_STATUS gprtPortPowerSet(IN GT_QD_DEV  * dev,
+				IN GT_LPORT   port,
+				IN GT_BOOL    onoff)
+{
+	GT_U16	data;
+	GT_U8	hwPort;	/* the physical port number */
+	GT_PHY_INFO    phyInfo;
+
+	hwPort = GT_LPORT_2_PORT(port);
+	phyInfo.phyId = GT_GET_PHY_ID(dev, hwPort);
+
+	/* check if the port is configurable */
+	if (phyInfo.phyId == GT_INVALID_PHY) {
+		gtSemGive(dev, dev->phyRegsSem);
+		return GT_NOT_SUPPORTED;
+	}
+
+	if (driverFindPhyInformation(dev, hwPort, &phyInfo) != GT_OK) {
+		DBG_INFO(("Unknown PHY device.\n"));
+		gtSemGive(dev, dev->phyRegsSem);
+		return GT_FAIL;
+	}
+
+	data = 0;
+	if (!onoff) {
+		/* Page 2, register 16, bit 3. GMII intefrace power down */
+		if (hwSetPagedPhyRegField(dev, hwPort, 2, QD_PHY_SPEC_CONTROL_REG,
+								  3, 1, phyInfo.anyPage, 0) != GT_OK)
+			DBG_INFO(("setPagedPhyRegField failed: %d - %d -> %d, %d/%d, %d\n",
+							hwPort, 2, QD_PHY_SPEC_CONTROL_REG, 3, 1, 0));
+		/* Page 0, register 16, bits 3,2. Copper Transmitter disable, Power down */
+		if (hwSetPagedPhyRegField(dev, hwPort, 0, QD_PHY_SPEC_CONTROL_REG, 2, 2, phyInfo.anyPage, 3) != GT_OK)
+			DBG_INFO(("setPhyPagedRegField failed: %d - %d ->%d, %d/%d, %d\n",
+							hwPort, 2, QD_PHY_SPEC_CONTROL_REG, 2, 2, 3));
+
+		/* Register 0, bit 11, Power Down */
+		if (hwSetPhyRegField(dev, hwPort, QD_PHY_CONTROL_REG, 11, 1, 1) != GT_OK)
+			DBG_INFO(("setPhyRegField failed: %d - %d, %d/%d, %d\n",
+							hwPort, QD_PHY_CONTROL_REG, 11, 1, 1));
+	} else {
+		/* Page 2, register 16, bit 3 GMII intefrace power up */
+		if (hwSetPagedPhyRegField(dev, hwPort, 2, QD_PHY_SPEC_CONTROL_REG,
+								  3, 1, phyInfo.anyPage, 1) != GT_OK)
+			DBG_INFO(("setPagedPhyRegField failed: %d - %d -> %d, %d/%d, %d\n",
+							hwPort, 2, QD_PHY_SPEC_CONTROL_REG, 3, 1, 1));
+		/* Page 0, register 16, bits 3,2. Copper Transmitter disable, Power up */
+		if (hwSetPagedPhyRegField(dev, hwPort, 0, QD_PHY_SPEC_CONTROL_REG, 2, 2, phyInfo.anyPage, 0) != GT_OK)
+			DBG_INFO(("setPagedPhyRegField failed: %d - %d -> %d, %d/%d, %d\n",
+							hwPort, 2, QD_PHY_SPEC_CONTROL_REG, 2, 2, 0));
+		/* Register 0, bit 11, Power up */
+		if (hwSetPhyRegField(dev, hwPort, QD_PHY_CONTROL_REG, 11, 1, 0) != GT_OK)
+			DBG_INFO(("setPhyRegField failed: %d - %d, %d/%d, %d\n",
+							hwPort, QD_PHY_CONTROL_REG, 11, 1, 0));
+	}
+	return 0;
+}
+
+GT_STATUS gprtPortPowerGet(IN GT_QD_DEV  * dev,
+				IN GT_LPORT   port)
+{
+	GT_U16	data;
+	GT_U8	hwPort;	/* the physical port number */
+
+	hwPort = GT_LPORT_2_PORT(port);
+	if (hwGetPhyRegField(dev, hwPort, QD_PHY_CONTROL_REG, 11, 1,
+						&data) != GT_OK)
+		DBG_INFO(("getPhyRegField failed: %d - %d, %d/%d\n", hwPort, QD_PHY_CONTROL_REG, 11, 1));
+
+	return !data;
+}
+
+/*******************************************************************************
 * gprtPortRestartAutoNeg
 *
 * DESCRIPTION:

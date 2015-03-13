@@ -22,7 +22,8 @@ ifeq ($(CONFIG_ARCH_AVANTA_LP),y)
 obj-$(CONFIG_MV_INCLUDE_SWITCH)	+= mv_switch.o mv_switch_sysfs.o mv_phy.o
 
 else
-
+ifeq ($(CONFIG_MV_INCLUDE_SWITCH),y)
 obj-$(CONFIG_MV_INCLUDE_SWITCH)	+= mv_switch.o mv_switch_sysfs.o
+endif	# CONFIG_MV_INCLUDE_SWITCH
 
 endif # CONFIG_ARCH_AVANTA_LP
