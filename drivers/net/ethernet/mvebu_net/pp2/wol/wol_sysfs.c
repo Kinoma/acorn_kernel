@@ -232,29 +232,33 @@ static int wol_ptrn_get(char *ptrnStr, char *maskStr, MV_U8 *data, MV_U8 *mask, 
 	return j;
 }
 
+static char          _ptrnStr_[MV_PP2_WOL_PTRN_BYTES*3];
+static char          _maskStr_[MV_PP2_WOL_PTRN_BYTES*3];
+static char          _data_[MV_PP2_WOL_PTRN_BYTES];
+static char          _mask_[MV_PP2_WOL_PTRN_BYTES];
 static ssize_t wol_ptrn_store(struct device *dev,
 			struct device_attribute *attr, const char *buf, size_t len)
 {
 	const char    *name = attr->attr.name;
 	unsigned int  err = 0;
 	int           size, i = 0, off = 0;
-	char          ptrnStr[MV_PP2_WOL_PTRN_BYTES*3];
-	char          maskStr[MV_PP2_WOL_PTRN_BYTES*3];
-	char          data[MV_PP2_WOL_PTRN_BYTES];
-	char          mask[MV_PP2_WOL_PTRN_BYTES];
+	//char          ptrnStr[MV_PP2_WOL_PTRN_BYTES*3];
+	//char          maskStr[MV_PP2_WOL_PTRN_BYTES*3];
+	//char          data[MV_PP2_WOL_PTRN_BYTES];
+	//char          mask[MV_PP2_WOL_PTRN_BYTES];
 	unsigned long flags;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	sscanf(buf, "%d %d %s %s", &i, &off, ptrnStr, maskStr);
+	sscanf(buf, "%d %d %s %s", &i, &off, _ptrnStr_, _maskStr_);
 
 	local_irq_save(flags);
 
 	if (!strcmp(name, "ptrn")) {
-		size = wol_ptrn_get(ptrnStr, maskStr, data, mask, MV_PP2_WOL_PTRN_BYTES);
+		size = wol_ptrn_get(_ptrnStr_, _maskStr_, _data_, _mask_, MV_PP2_WOL_PTRN_BYTES);
 		if (size != -1)
-			err = mvPp2WolPtrnSet(i, off, size, data, mask);
+			err = mvPp2WolPtrnSet(i, off, size, _data_, _mask_);
 		else
 			err = 1;
 	} else

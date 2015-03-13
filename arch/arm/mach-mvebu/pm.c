@@ -89,6 +89,7 @@ static int mvebu_pm_powerdown(unsigned long data)
 #define SDRAM_WIN_BASE_REG(x)	(0x20180 + (0x8*x))
 #define SDRAM_WIN_CTRL_REG(x)	(0x20184 + (0x8*x))
 
+#if 0
 static phys_addr_t mvebu_internal_reg_base(void)
 {
 	struct device_node *np;
@@ -107,6 +108,7 @@ static phys_addr_t mvebu_internal_reg_base(void)
 
 	return of_translate_address(np, in_addr);
 }
+#endif
 
 static void mvebu_pm_store_bootinfo(void)
 {

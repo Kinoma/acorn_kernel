@@ -172,7 +172,8 @@ int armada_38x_cpuidle_wa(void)
 	tmp++;
 	*tmp = 0x2C;					/* Save size */
 	tmp++;
-	memcpy(tmp, sleep_save_sp[hw_cpu] + 0xC0000000, 0x2C); /* Copy from virtual address (mmu enabled) */
+	memcpy(tmp, (u32 *)sleep_save_sp[hw_cpu] + 0xC0000000, 0x2C); /* Copy from virtual address (mmu enabled) */
+	return 0;
 }
 
 static int __init mvebu_v7_pmsu_init(void)

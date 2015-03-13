@@ -3067,7 +3067,7 @@ static GT_STATUS atuStateAppToDev
     }
     else
     {
-        switch ((GT_ATU_UC_STATE)state)
+        switch ((GT_U32)state)
         {
             case GT_MC_INVALID:
                 newState = state;

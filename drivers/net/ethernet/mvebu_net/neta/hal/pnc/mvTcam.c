@@ -864,19 +864,20 @@ void tcam_hw_debug(int en)
  * tcam_hw_dump - print out TCAM registers
  * @all - whether to dump all entries or valid only
  */
+static char dump_buff[1024];
 int tcam_hw_dump(int all)
 {
 	int i;
 	struct tcam_entry te;
-	char buff[1024];
+	//char buff[1024];
 
 	for (i = 0; i < MV_PNC_TCAM_SIZE(); i++) {
 		tcam_sw_clear(&te);
 		tcam_hw_read(&te, i);
 		if (!all && (te.ctrl.flags & TCAM_F_INV))
 			continue;
-		tcam_sw_dump(&te, buff);
-		mvOsPrintf(buff);
+		tcam_sw_dump(&te, dump_buff);
+		mvOsPrintf(dump_buff);
 	}
 
 	return 0;

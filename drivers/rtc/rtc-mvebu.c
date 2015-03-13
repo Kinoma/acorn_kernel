@@ -68,6 +68,7 @@ typedef struct mvebu_rtc_s {
 	uint32_t           periodic_freq;
 } mvebu_rtc_t;
 
+#if 0
 static bool rtc_init_state(mvebu_rtc_t *rtc)
 {
 	/* Update RTC-MBUS bridge timing parameters */
@@ -110,6 +111,7 @@ static bool rtc_init_state(mvebu_rtc_t *rtc)
 		}
 	}
 }
+#endif
 
 /*
  * Calculate the next alarm time given the

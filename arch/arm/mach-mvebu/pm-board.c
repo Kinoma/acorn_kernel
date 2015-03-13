@@ -138,7 +138,7 @@ static int mvebu_armada_xp_gp_pm_init(void)
 
 		gpio_ctrl_np = args.np;
 		pic_raw_gpios[i] = args.args[0];
-		gpio_ctrl_addr[i] = of_get_address(gpio_ctrl_np, 0, NULL, NULL);
+		gpio_ctrl_addr[i] = (__be32 *)of_get_address(gpio_ctrl_np, 0, NULL, NULL);
 
 		if ((i == 0) || (i > 0 && gpio_ctrl_addr[i] != gpio_ctrl_addr[i-1]))
 			gpio_ctrl[i] = of_iomap(gpio_ctrl_np, 0);

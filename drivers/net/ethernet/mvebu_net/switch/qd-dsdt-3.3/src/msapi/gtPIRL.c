@@ -1414,7 +1414,7 @@ static GT_STATUS pirlResourceToData
     pirlData->bktRateType = res->bktRateType;
     pirlData->bktTypeMask = res->bktTypeMask;
 
-    switch(res->byteTobeCounted)
+    switch((int)res->byteTobeCounted)
     {
         case 1:
             pirlData->byteTobeCounted = GT_PIRL_COUNT_ALL_LAYER1;

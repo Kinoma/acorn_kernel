@@ -108,7 +108,6 @@ static void __init armada_380_mbus_optimization(void)
 {
 	struct device_node *np;
 	void __iomem *mbus_units_base;
-	u32 val;
 
 	np = of_find_matching_node(NULL, of_mbusc_table);
 	if (np) {
@@ -137,7 +136,7 @@ static void __init armada_380_mbus_optimization(void)
 }
 
 static void __iomem *
-armada_380_ioremap_caller(unsigned long phys_addr, size_t size,
+armada_380_ioremap_caller(phys_addr_t phys_addr, size_t size,
 			  unsigned int mtype, void *caller)
 {
 	struct resource pcie_mem;
@@ -190,7 +189,7 @@ static int __init mvebu_scan_mem(unsigned long node, const char *uname,
 {
 	const char *type = of_get_flat_dt_prop(node, "device_type", NULL);
 	const __be32 *reg, *endp;
-	int l;
+	unsigned long l;
 
 	if (type == NULL || strcmp(type, "memory"))
 		return 0;
@@ -205,8 +204,8 @@ static int __init mvebu_scan_mem(unsigned long node, const char *uname,
 	while ((endp - reg) >= (dt_root_addr_cells + dt_root_size_cells)) {
 		u64 base, size;
 
-		base = dt_mem_next_cell(dt_root_addr_cells, &reg);
-		size = dt_mem_next_cell(dt_root_size_cells, &reg);
+		base = dt_mem_next_cell(dt_root_addr_cells, (__be32 **)&reg);
+		size = dt_mem_next_cell(dt_root_size_cells, (__be32 **)&reg);
 
 		memblock_reserve(base, MVEBU_DDR_TRAINING_AREA_SZ);
 	}

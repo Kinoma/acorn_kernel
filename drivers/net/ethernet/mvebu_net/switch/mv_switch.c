@@ -1325,8 +1325,8 @@ int mv_switch_get_free_buffers_num(void)
 #define QD_MAX 7
 void mv_switch_stats_print(void)
 {
-	static GT_STATS_COUNTER_SET3 history_counters[QD_MAX] = {0};
-	static GT_PORT_STAT2 history_stats[QD_MAX] = {0};
+	static GT_STATS_COUNTER_SET3 history_counters[QD_MAX] = {{0}};
+	static GT_PORT_STAT2 history_stats[QD_MAX] = {{0}};
 	GT_STATS_COUNTER_SET3 * counters[QD_MAX];
 	GT_PORT_STAT2 * port_stats[QD_MAX];
 
@@ -1387,17 +1387,17 @@ void mv_switch_stats_print(void)
 		QD_CNT_CORRECT(counters, InMulticasts, 2), QD_CNT_CORRECT(counters, InMulticasts, 3),
 		QD_CNT_CORRECT(counters, InMulticasts, 4), QD_CNT_CORRECT(counters, InMulticasts, 5),
 		QD_CNT_CORRECT(counters, InMulticasts, 6));
-	pr_err("inDiscardLo     " QD_FMT,
+	pr_err("inDiscardLo     " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 0), QD_STAT_CORRECT(port_stats, inDiscardLo, 1),
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 2), QD_STAT_CORRECT(port_stats, inDiscardLo, 3),
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 4), QD_STAT_CORRECT(port_stats, inDiscardLo, 5),
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 6));
-	pr_err("inDiscardHi     " QD_FMT,
+	pr_err("inDiscardHi     " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 0), QD_STAT_CORRECT(port_stats, inDiscardHi, 1),
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 2), QD_STAT_CORRECT(port_stats, inDiscardHi, 3),
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 4), QD_STAT_CORRECT(port_stats, inDiscardHi, 5),
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 6));
-	pr_err("inFiltered      " QD_FMT,
+	pr_err("inFiltered      " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, inFiltered, 0), QD_STAT_CORRECT(port_stats, inFiltered, 1),
 		QD_STAT_CORRECT(port_stats, inFiltered, 2), QD_STAT_CORRECT(port_stats, inFiltered, 3),
 		QD_STAT_CORRECT(port_stats, inFiltered, 4), QD_STAT_CORRECT(port_stats, inFiltered, 5),
@@ -1427,7 +1427,7 @@ void mv_switch_stats_print(void)
 		QD_CNT_CORRECT(counters, OutBroadcasts, 2), QD_CNT_CORRECT(counters, OutBroadcasts, 3),
 		QD_CNT_CORRECT(counters, OutBroadcasts, 4), QD_CNT_CORRECT(counters, OutBroadcasts, 5),
 		QD_CNT_CORRECT(counters, OutBroadcasts, 6));
-	pr_err("outFiltered     " QD_FMT,
+	pr_err("outFiltered     " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, outFiltered, 0), QD_STAT_CORRECT(port_stats, outFiltered, 1),
 		QD_STAT_CORRECT(port_stats, outFiltered, 2), QD_STAT_CORRECT(port_stats, outFiltered, 3),
 		QD_STAT_CORRECT(port_stats, outFiltered, 4), QD_STAT_CORRECT(port_stats, outFiltered, 5),
@@ -2438,7 +2438,7 @@ int mv_switch_vid_add(unsigned int lport, unsigned short vid, unsigned char egr_
 	}
 
 	/* Update VTU entry */
-	for (port = 0; port < qd_dev->numOfPorts; port++) {
+	for (port = 0; port < qd_dev->numOfPorts && port < MV_SWITCH_MAX_PORT_NUM; port++) {
 		if (sw_vlan_tbl[vid].port_bm & (1 << port)) {
 			if (port == lport)
 				vtu_entry.vtuData.memberTagP[port] = egr_mode;/* update egress mode only */
@@ -5535,7 +5535,7 @@ int mv_switch_port_state_get(unsigned int lport, enum sw_port_state_t *state)
 {
 	GT_STATUS rc = GT_OK;
 
-	rc = gstpGetPortState(qd_dev, lport, state);
+	rc = gstpGetPortState(qd_dev, lport, (GT_PORT_STP_STATE *)state);
 	SW_IF_ERROR_STR(rc, "failed to call gpcsGetForcedLink()\n");
 
 	return MV_OK;
@@ -5657,14 +5657,15 @@ static int mv_switch_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_OF
 	struct mv_switch_pdata *plat_data = kzalloc(sizeof(struct mv_switch_pdata), GFP_KERNEL);
-	platform_set_drvdata(pdev, plat_data);
-	struct device_node *np = pdev->dev.of_node;
+	struct device_node *np;
 	int ret;
+
 #if 0
 	const char *tag_mode = NULL;
 	const char *preset = NULL;
 #endif
-
+	platform_set_drvdata(pdev, plat_data);
+	np = pdev->dev.of_node;
 	ret = 0;
 	ret |= of_property_read_u32(np, "index", &plat_data->index);
 	ret |= of_property_read_u32(np, "phy_addr", &plat_data->phy_addr);

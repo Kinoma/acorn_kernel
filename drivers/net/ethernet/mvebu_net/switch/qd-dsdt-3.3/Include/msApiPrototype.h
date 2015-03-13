@@ -6396,7 +6396,7 @@ GT_STATUS gprtSetSAPriOverride
 (
     IN GT_QD_DEV    *dev,
     IN GT_LPORT        port,
-    IN GT_BOOL        mode
+    IN GT_PRI_OVERRIDE	mode
 );
 
 /*******************************************************************************

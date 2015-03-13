@@ -99,7 +99,7 @@ out:
 }
 
 static void __iomem *
-armada_375_ioremap_caller(unsigned long phys_addr, size_t size,
+armada_375_ioremap_caller(phys_addr_t phys_addr, size_t size,
 			  unsigned int mtype, void *caller)
 {
 	struct resource pcie_mem;

@@ -283,6 +283,25 @@ static int xhci_plat_remove(struct platform_device *pdev)
 	return plat_of->remove(pdev);
 }
 
+static void xhci_plat_shutdown(struct platform_device *pdev)
+{
+	const struct xhci_plat_ops *plat_of = &xhci_plat_default;
+
+	if (pdev->dev.of_node) {
+		const struct of_device_id *match =
+			of_match_device(usb_xhci_of_match, &pdev->dev);
+		if (!match)
+			return;
+		plat_of = match->data;
+	}
+
+	if (!plat_of || !plat_of->remove)
+		return;
+
+	plat_of->remove(pdev);
+	return;
+}
+
 #ifdef CONFIG_PM
 static int xhci_plat_suspend(struct device *dev)
 {
@@ -326,7 +345,7 @@ static const struct dev_pm_ops xhci_plat_pm_ops = {
 static struct platform_driver usb_xhci_driver = {
 	.probe		= xhci_plat_probe,
 	.remove		= xhci_plat_remove,
-	.shutdown	= xhci_plat_remove,
+	.shutdown	= xhci_plat_shutdown,
 	.driver	= {
 		.name = "xhci-hcd",
 		.pm = DEV_PM_OPS,

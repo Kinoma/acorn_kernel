@@ -263,7 +263,7 @@ static DEVICE_ATTR(isrRegs,	S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(gmacRegs,	S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(dropCntrs,	S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(stats,       S_IWUSR, NULL, mv_pp2_port_store);
-static DEVICE_ATTR(mac,	S_IWUSR, NULL, mv_pp2_port_store);
+//static DEVICE_ATTR(mac,	S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(pnc,		S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(skb,         S_IWUSR, NULL, mv_pp2_port_store);
 

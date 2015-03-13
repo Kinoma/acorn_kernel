@@ -325,7 +325,7 @@ static struct device_attribute neta_switch[] = {
 		/*can not __ATTR(power) because linux default create the power, can not duplicate */
 		__ATTR(power_config, S_IRUSR | S_IWUSR, mv_link_power_show, mv_link_power_set),
 		__ATTR(peer_mac_addresses, S_IRUGO, mv_mac_addr_show, NULL),
-		NULL
+		{{NULL}}
 };
 
 

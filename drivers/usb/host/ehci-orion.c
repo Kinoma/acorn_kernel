@@ -361,7 +361,7 @@ static int ehci_orion_drv_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static int ehci_orion_drv_shutdown(struct platform_device *pdev)
+static void ehci_orion_drv_shutdown(struct platform_device *pdev)
 {
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	static void __iomem *usb_pwr_ctrl_base;
