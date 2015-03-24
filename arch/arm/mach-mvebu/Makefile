@@ -24,8 +24,8 @@ endif
 obj-$(CONFIG_HOTPLUG_CPU)        += hotplug.o
 obj-$(CONFIG_PROC_FS)            += dump_mv_regs.o
 obj-$(CONFIG_MVEBU_SOFT_POWEROFF)      += soft-poweroff.o
-obj-y	+= linux_oss/mvOs.o
 
+obj-y += linux_oss/
 
 COMMON_DIR	:= $(srctree)/arch/arm/mach-mvebu/include/mach
 ccflags-y	+= -I$(COMMON_DIR) -DMV_CPU_$(ENDIAN)

@@ -2078,7 +2078,10 @@ static int mv_pp2_tx(struct sk_buff *skb, struct net_device *dev)
 	struct eth_port *pp = MV_ETH_PRIV(dev);
 	int frags = 0, cpu = smp_processor_id();
 	u32 tx_cmd, bufPhysAddr;
-	struct mv_pp2_tx_spec tx_spec, *tx_spec_ptr = NULL;
+#ifdef	CONFIG_MV_PP2_TX_SPECIAL
+	struct mv_pp2_tx_spec tx_spec;
+#endif
+	struct mv_pp2_tx_spec *tx_spec_ptr = NULL;
 	struct tx_queue *txq_ctrl = NULL;
 	struct txq_cpu_ctrl *txq_cpu_ptr = NULL;
 	struct aggr_tx_queue *aggr_txq_ctrl = NULL;
@@ -4317,7 +4320,7 @@ static u32 mv_pp2_netdev_fix_features_internal(struct net_device *dev, u32 featu
 	}
 	return features;
 }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 39)
 static void mv_pp2_netdev_update_features(struct net_device *dev, int mtu)
 {
 	if ((MV_MAX_PKT_SIZE(mtu) > MV_PP2_TX_CSUM_MAX_SIZE)) {
@@ -4330,7 +4333,7 @@ static void mv_pp2_netdev_update_features(struct net_device *dev, int mtu)
 			dev->features |= (NETIF_F_IP_CSUM | NETIF_F_SG | NETIF_F_TSO);
 	}
 }
-
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 25)
 static u32 mv_pp2_netdev_fix_features(struct net_device *dev, u32 features)
 {

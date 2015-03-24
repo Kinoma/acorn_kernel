@@ -2174,8 +2174,9 @@ out:
 #ifndef CONFIG_MV_NETA_TXDONE_ISR
 	if (txq_ctrl) {
 		if (txq_ctrl->txq_count >= mv_ctrl_txdone) {
+		#ifdef CONFIG_MV_ETH_STAT_DIST
 			u32 tx_done = mv_eth_txq_done(pp, txq_ctrl);
-
+		#endif
 			STAT_DIST((tx_done < pp->dist_stats.tx_done_dist_size) ? pp->dist_stats.tx_done_dist[tx_done]++ : 0);
 
 		}
@@ -6116,7 +6117,7 @@ static void mv_eth_cleanup_timer_callback(unsigned long data)
 {
 	struct cpu_ctrl *cpuCtrl = (struct cpu_ctrl *)data;
 	struct eth_port *pp = cpuCtrl->pp;
-	struct net_device *dev = pp->dev;
+//	struct net_device *dev = pp->dev;
 
 	STAT_INFO(pp->stats.cleanup_timer++);
 

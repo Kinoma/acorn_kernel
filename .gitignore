@@ -33,11 +33,6 @@ modules.builtin
 *.patch
 *.gcno
 
-drivers/crypto/mvebu_cesa/
-drivers/mtd/nand/mvebu_nfc/
-drivers/net/ethernet/mvebu_net/
-crypto/ocf/
-
 #
 # Top-level generic files
 #

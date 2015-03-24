@@ -28,20 +28,24 @@ disclaimer.
 #include <linux/etherdevice.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
-#include <linux/mv_switch.h>
+//#include <linux/mv_switch.h>
 #include <linux/module.h>
 
+#include "mv_switch.h"
 #include "mvOs.h"
+#ifndef CONFIG_OF
 #include "mvSysHwConfig.h"
 #include "eth-phy/mvEthPhy.h"
 #ifdef MV_INCLUDE_ETH_COMPLEX
 #include "ctrlEnv/mvCtrlEthCompLib.h"
 #endif /* MV_INCLUDE_ETH_COMPLEX */
-
+#endif
 #include "msApi.h"
 #include "mv_switch.h"
 #include "mv_phy.h"
+#ifndef CONFIG_OF
 #include "mv_mux/mv_mux_netdev.h"
+#endif
 
 /*******************************************************************************
 * mv_phy_port_power_state_set
@@ -76,8 +80,12 @@ int mv_phy_port_power_state_set(unsigned int lport, GT_BOOL state)
 	rc = gprtGetPortPowerDown(mv_switch_qd_dev_get(), lport, &pre_power_state);
 	SW_IF_ERROR_STR(rc, "failed to call gprtGetPortPowerDown()\n");
 
+#if 0
 	rc = gprtPortPowerDown(mv_switch_qd_dev_get(), lport, power_state);
 	SW_IF_ERROR_STR(rc, "failed to call gprtPortPowerDown()\n");
+#endif
+	rc = gprtPortPowerSet(mv_switch_qd_dev_get(), lport, state);
+	SW_IF_ERROR_STR(rc, "failed to call gprtPortPowerSet()\n");
 
 	/* since link change event from HW (via interrupt) does not happen
 	   for UP->DOWN link change, only for DOWN->UP after link negotiation,

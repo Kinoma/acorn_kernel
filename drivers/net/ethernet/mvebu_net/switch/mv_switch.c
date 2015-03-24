@@ -28,12 +28,13 @@ disclaimer.
 #include <linux/etherdevice.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
-#include <linux/mv_switch.h>
+//#include <linux/mv_switch.h>
 #include <linux/module.h>
+#include <linux/of.h>
 
+#include "mv_switch.h"
 #include "mvOs.h"
-#include "mvSysHwConfig.h"
-#include "eth-phy/mvEthPhy.h"
+#include "phy/mvEthPhy.h"
 #ifdef MV_INCLUDE_ETH_COMPLEX
 #include "ctrlEnv/mvCtrlEthCompLib.h"
 #endif /* MV_INCLUDE_ETH_COMPLEX */
@@ -75,7 +76,7 @@ static u32 switch_dbg = 0xffff;
 #define SWITCH_DBG(FLG, X)
 #endif /* SWITCH_DEBUG */
 
-static GT_QD_DEV qddev, *qd_dev = NULL;
+GT_QD_DEV qddev, *qd_dev = NULL;
 static GT_SYS_CONFIG qd_cfg;
 
 static int qd_cpu_port = -1;
@@ -91,13 +92,12 @@ static const struct mv_mux_switch_ops switch_ops;
 
 static struct tasklet_struct link_tasklet;
 static int switch_irq = -1;
-int switch_link_poll = 0;
+int switch_link_poll = 1;	/* polling mode */
 static struct timer_list switch_link_timer;
 
 static spinlock_t switch_lock;
 
 static unsigned int mv_switch_link_detection_init(struct mv_switch_pdata *plat_data);
-
 
 #ifdef CONFIG_AVANTA_LP
 static GT_BOOL mv_switch_mii_read(GT_QD_DEV *dev, unsigned int phy, unsigned int reg, unsigned int *data)
@@ -209,7 +209,6 @@ bool mv_switch_tag_get(int db, MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE prese
 		return MV_FALSE;
 
 	tag->tag_type = tag_mode;
-
 	if (preset == MV_PRESET_SINGLE_VLAN) {
 		if (tag_mode == MV_TAG_TYPE_MH) {
 			tag->rx_tag_ptrn.mh = MV_16BIT_BE(vid << 12);
@@ -234,7 +233,30 @@ bool mv_switch_tag_get(int db, MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE prese
 					tag->tx_tag.dsa = MV_32BIT_BE(0xc8000000 | MV_SWITCH_GROUP_VLAN_ID(vid + p));
 				}
 			}
-	} /* do nothing if Transparent mode */
+	} else if (preset == MV_PRESET_CUSTOM1) {
+		for (p = 0; p < qd_dev->numOfPorts; p++)
+			if (MV_BIT_CHECK(port_mask, p) && (p != qd_cpu_port)) {
+				if (tag_mode == MV_TAG_TYPE_MH) {
+                    if(p!=1&&p!=2){
+                        tag->rx_tag_ptrn.mh = MV_16BIT_BE((vid + p) << 12);
+					    tag->rx_tag_mask.mh = MV_16BIT_BE(0xf000);
+                        tag->tx_tag.mh = MV_16BIT_BE(((vid + p) << 12) | (1<<p));
+                    }
+                    else
+                    {
+                        tag->rx_tag_ptrn.mh = MV_16BIT_BE((vid + 1) << 12);
+					    tag->rx_tag_mask.mh = MV_16BIT_BE(0xf000);
+                        tag->tx_tag.mh = MV_16BIT_BE(((vid + 1) << 12) | (1<<2) | (1<<1));
+                    }
+				} else if (tag_mode == MV_TAG_TYPE_DSA) {
+					tag->rx_tag_ptrn.dsa =
+						MV_32BIT_BE(0xc8000000 | MV_SWITCH_GROUP_VLAN_ID(vid + p));
+					tag->rx_tag_mask.dsa = MV_32BIT_BE(0xff000f00);
+					tag->tx_tag.dsa = MV_32BIT_BE(0xc8000000 | MV_SWITCH_GROUP_VLAN_ID(vid + p));
+				}
+			}
+	}
+	/* do nothing if Transparent mode */
 
 	return MV_TRUE;
 }
@@ -919,6 +941,13 @@ int mv_switch_init(struct mv_switch_pdata *plat_data)
 		return -1;
 	}
 
+	switch_ports_mask = plat_data->connected_port_mask;
+#if 0
+	/* paul.chen for WNC initail */
+	mv_switch_port_based_vlan_set(0x4f, 6);	/* for WNC only	 LAN Ports  0~3 and 6 eth0*/
+	mv_switch_port_based_vlan_set(0x30, 5);	/* for WNC only  WAN Port     4 and 5 eth1*/
+#endif
+
 	/* set priorities rules */
 	for (p = 0; p < qd_dev->numOfPorts; p++) {
 		if (MV_BIT_CHECK(plat_data->connected_port_mask, p)) {
@@ -1014,6 +1043,9 @@ int mv_switch_preset_init(MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE preset, in
 	case MV_PRESET_PER_PORT_VLAN:
 		printk(KERN_INFO "    o preset mode = Vlan Per Port\n");
 		break;
+	case MV_PRESET_CUSTOM1:
+		printk(KERN_INFO "    o preset mode = Vlan Custom defined mode 1\n");
+		break;
 	default:
 		printk(KERN_INFO "    o preset mode = Unknown\n");
 	}
@@ -1098,7 +1130,6 @@ int mv_switch_preset_init(MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE preset, in
 		}
 	}
 	SWITCH_DBG(SWITCH_DBG_LOAD, ("\n"));
-
 	/* split ports to vlans according to preset */
 	if (preset == MV_PRESET_SINGLE_VLAN) {
 		mv_switch_vlan_set(MV_SWITCH_GROUP_VLAN_ID(vid), switch_ports_mask);
@@ -1106,6 +1137,9 @@ int mv_switch_preset_init(MV_TAG_TYPE tag_mode, MV_SWITCH_PRESET_TYPE preset, in
 		for (p = 0; p < qd_dev->numOfPorts; p++)
 			if (MV_BIT_CHECK(switch_ports_mask, p) && (p != qd_cpu_port))
 				mv_switch_vlan_set(MV_SWITCH_GROUP_VLAN_ID(vid + p), (1 << p));
+	} else if (preset == MV_PRESET_CUSTOM1) {
+        mv_switch_vlan_set(MV_SWITCH_GROUP_VLAN_ID(1),(1<<1)|(1<<2));
+        mv_switch_vlan_set(MV_SWITCH_GROUP_VLAN_ID(0),(1<<0));
 	}
 
 	if (preset == MV_PRESET_TRANSPARENT) {
@@ -1223,7 +1257,7 @@ static unsigned int mv_switch_link_detection_init(struct mv_switch_pdata *plat_d
 			switch_link_timer.function = mv_switch_link_timer_function;
 
 			if (switch_irq == -1)
-				switch_link_timer.data = connected_phys_mask;
+				switch_link_timer.data = connected_phys_mask & (~plat_data->forced_link_port_mask);
 
 			switch_link_timer.expires = jiffies + (HZ);	/* 1 second */
 			add_timer(&switch_link_timer);
@@ -1289,8 +1323,8 @@ int mv_switch_get_free_buffers_num(void)
 #define QD_MAX 7
 void mv_switch_stats_print(void)
 {
-	static GT_STATS_COUNTER_SET3 history_counters[QD_MAX] = {0};
-	static GT_PORT_STAT2 history_stats[QD_MAX] = {0};
+	static GT_STATS_COUNTER_SET3 history_counters[QD_MAX] = {{0}};
+	static GT_PORT_STAT2 history_stats[QD_MAX] = {{0}};
 	GT_STATS_COUNTER_SET3 * counters[QD_MAX];
 	GT_PORT_STAT2 * port_stats[QD_MAX];
 
@@ -1351,17 +1385,17 @@ void mv_switch_stats_print(void)
 		QD_CNT_CORRECT(counters, InMulticasts, 2), QD_CNT_CORRECT(counters, InMulticasts, 3),
 		QD_CNT_CORRECT(counters, InMulticasts, 4), QD_CNT_CORRECT(counters, InMulticasts, 5),
 		QD_CNT_CORRECT(counters, InMulticasts, 6));
-	pr_err("inDiscardLo     " QD_FMT,
+	pr_err("inDiscardLo     " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 0), QD_STAT_CORRECT(port_stats, inDiscardLo, 1),
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 2), QD_STAT_CORRECT(port_stats, inDiscardLo, 3),
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 4), QD_STAT_CORRECT(port_stats, inDiscardLo, 5),
 		QD_STAT_CORRECT(port_stats, inDiscardLo, 6));
-	pr_err("inDiscardHi     " QD_FMT,
+	pr_err("inDiscardHi     " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 0), QD_STAT_CORRECT(port_stats, inDiscardHi, 1),
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 2), QD_STAT_CORRECT(port_stats, inDiscardHi, 3),
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 4), QD_STAT_CORRECT(port_stats, inDiscardHi, 5),
 		QD_STAT_CORRECT(port_stats, inDiscardHi, 6));
-	pr_err("inFiltered      " QD_FMT,
+	pr_err("inFiltered      " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, inFiltered, 0), QD_STAT_CORRECT(port_stats, inFiltered, 1),
 		QD_STAT_CORRECT(port_stats, inFiltered, 2), QD_STAT_CORRECT(port_stats, inFiltered, 3),
 		QD_STAT_CORRECT(port_stats, inFiltered, 4), QD_STAT_CORRECT(port_stats, inFiltered, 5),
@@ -1391,7 +1425,7 @@ void mv_switch_stats_print(void)
 		QD_CNT_CORRECT(counters, OutBroadcasts, 2), QD_CNT_CORRECT(counters, OutBroadcasts, 3),
 		QD_CNT_CORRECT(counters, OutBroadcasts, 4), QD_CNT_CORRECT(counters, OutBroadcasts, 5),
 		QD_CNT_CORRECT(counters, OutBroadcasts, 6));
-	pr_err("outFiltered     " QD_FMT,
+	pr_err("outFiltered     " QD_STAT_FMT,
 		QD_STAT_CORRECT(port_stats, outFiltered, 0), QD_STAT_CORRECT(port_stats, outFiltered, 1),
 		QD_STAT_CORRECT(port_stats, outFiltered, 2), QD_STAT_CORRECT(port_stats, outFiltered, 3),
 		QD_STAT_CORRECT(port_stats, outFiltered, 4), QD_STAT_CORRECT(port_stats, outFiltered, 5),
@@ -1530,7 +1564,7 @@ static char *mv_str_port_state(GT_PORT_STP_STATE state)
 	}
 }
 
-static char *mv_str_speed_state(int port)
+char *mv_str_speed_state(int port)
 {
 	GT_PORT_SPEED_MODE speed;
 	char *speed_str;
@@ -1553,7 +1587,7 @@ static char *mv_str_speed_state(int port)
 	return speed_str;
 }
 
-static char *mv_str_duplex_state(int port)
+char *mv_str_duplex_state(int port)
 {
 	GT_BOOL duplex;
 
@@ -1568,7 +1602,7 @@ static char *mv_str_duplex_state(int port)
 		return (duplex) ? "Full" : "Half";
 }
 
-static char *mv_str_link_state(int port)
+char *mv_str_link_state(int port)
 {
 	GT_BOOL link;
 
@@ -1650,6 +1684,36 @@ static char *mv_str_header_mode(GT_BOOL mode)
 		return "True";
 	default:
 		return "Invalid";
+	}
+}
+
+/* paul.chen for ATU table : David Wang */
+void mv_switch_atu_print(void)
+{
+	GT_STATUS status;
+	GT_ATU_ENTRY atu_entry;
+
+	if (qd_dev == NULL) {
+		pr_err("Switch is not initialized\n");
+		return;
+	}
+	memset(&atu_entry, 0, sizeof(atu_entry));
+
+	pr_err("Printing Switch ATU Table:\n");
+	if (gfdbGetAtuEntryFirst(qd_dev, &atu_entry) != GT_OK)
+		return;
+	pr_err("ATU Entry: db = %d, MAC = %02X:%02X:%02X:%02X:%02X:%02X\n",
+				atu_entry.DBNum, atu_entry.macAddr.arEther[0],
+				atu_entry.macAddr.arEther[1], atu_entry.macAddr.arEther[2],
+				atu_entry.macAddr.arEther[3], atu_entry.macAddr.arEther[4],
+				atu_entry.macAddr.arEther[5]);
+
+	while ((status = gfdbGetAtuEntryNext(qd_dev, &atu_entry)) == GT_OK) {
+		pr_err("ATU Entry: db = %d, MAC = %02X:%02X:%02X:%02X:%02X:%02X\n",
+				atu_entry.DBNum, atu_entry.macAddr.arEther[0],
+				atu_entry.macAddr.arEther[1], atu_entry.macAddr.arEther[2],
+				atu_entry.macAddr.arEther[3], atu_entry.macAddr.arEther[4],
+				atu_entry.macAddr.arEther[5]);
 	}
 }
 
@@ -1813,6 +1877,55 @@ int mv_switch_reg_write(int port, int reg, int type, MV_U16 value)
 		return 2;
 	}
 	return 0;
+}
+
+int mv_switch_port_power_set(int port, int updown)
+{
+	GT_STATUS rc = GT_OK;
+
+	MV_IF_NULL_RET_STR(qd_dev, MV_FAIL, "switch dev qd_dev has not been init!\n");
+
+	rc = gprtPortPowerSet(qd_dev, port, updown);
+	SW_IF_ERROR_STR(rc, "failed to call gprtPortPowerSet, port: %d, state: %d\n", port, updown);
+
+	return MV_OK;
+}
+
+int mv_switch_port_power_get(int port)
+{
+	MV_IF_NULL_RET_STR(qd_dev, MV_FAIL, "switch dev qd_dev has not been init!\n");
+
+	return gprtPortPowerGet(qd_dev, port);
+}
+
+size_t mv_switch_get_peer_count(void)
+{
+	GT_U32  count = 0;
+
+	MV_IF_NULL_RET_STR(qd_dev, MV_FAIL, "switch dev qd_dev has not been init!\n");
+
+	if (gfdbGetAtuAllCount(qd_dev, &count) != GT_OK)
+		return 0;
+	return count;
+}
+
+size_t mv_switch_get_peer_mac_addresses(uint8_t mac_addresses[][6], size_t count, int port)
+{
+	GT_ATU_ENTRY mac_entry;
+	size_t  i = 0;
+
+	MV_IF_NULL_RET_STR(qd_dev, MV_FAIL, "switch dev qd_dev has not been init!\n");
+
+	memset(&mac_entry, 0, sizeof(mac_entry));
+	if (gfdbGetAtuEntryFirst(qd_dev, &mac_entry) != GT_OK)
+		return 0;
+	do {
+		if (mac_entry.portVec & (1 << port)) {
+			memcpy(mac_addresses[i], mac_entry.macAddr.arEther, 6);
+			++i;
+		}
+	} while (i <= count && gfdbGetAtuEntryNext(qd_dev, &mac_entry) == GT_OK);
+	return i;
 }
 
 int mv_switch_all_multicasts_del(int db_num)
@@ -2323,7 +2436,7 @@ int mv_switch_vid_add(unsigned int lport, unsigned short vid, unsigned char egr_
 	}
 
 	/* Update VTU entry */
-	for (port = 0; port < qd_dev->numOfPorts; port++) {
+	for (port = 0; port < qd_dev->numOfPorts && port < MV_SWITCH_MAX_PORT_NUM; port++) {
 		if (sw_vlan_tbl[vid].port_bm & (1 << port)) {
 			if (port == lport)
 				vtu_entry.vtuData.memberTagP[port] = egr_mode;/* update egress mode only */
@@ -5420,7 +5533,7 @@ int mv_switch_port_state_get(unsigned int lport, enum sw_port_state_t *state)
 {
 	GT_STATUS rc = GT_OK;
 
-	rc = gstpGetPortState(qd_dev, lport, state);
+	rc = gstpGetPortState(qd_dev, lport, (GT_PORT_STP_STATE *)state);
 	SW_IF_ERROR_STR(rc, "failed to call gpcsGetForcedLink()\n");
 
 	return MV_OK;
@@ -5486,9 +5599,120 @@ int mv_switch_cpu_port_get(unsigned int *cpu_port)
 	return MV_OK;
 }
 
+#ifdef CONFIG_OF
+char *mv_switch_str;
+
+static int mv_switch_cmdline_config(char *s)
+{
+	mv_switch_str = s;
+	return 1;
+}
+__setup("switch_config=", mv_switch_cmdline_config);
+
+static void mv_switch_parse_cmd_line(char *str, MV_SWITCH_PRESET_TYPE *preset, MV_TAG_TYPE *tag_mode)
+{
+	int len, curr = 0;
+
+/* default values */
+    *preset =  MV_PRESET_CUSTOM1;
+    *tag_mode = MV_TAG_TYPE_MH;
+    if (!str || !strcmp(str, "none"))
+        return;
+
+	len = strlen(str);
+
+	/* Parse tag mode */
+	if ((len >= 2) && (((str[curr] == 'm') && (str[curr + 1] == 'h')) ||
+		((str[curr] == 'M') && (str[curr + 1] == 'H')))) {
+			*tag_mode = MV_TAG_TYPE_MH;
+			curr += 2;
+	} else if ((len >= 3) && (((str[curr] == 'd') && (str[curr + 1] == 's') && (str[curr + 2] == 'a'))
+			|| ((str[curr] == 'D') && (str[curr + 1] == 'S') && (str[curr + 2] == 'A')))) {
+		*tag_mode = MV_TAG_TYPE_DSA;
+		curr += 3;
+	} else if ((len >= 4) && (((str[curr] == 'n') && (str[curr + 1] == 'o') && (str[curr + 2] == 'n') && (str[curr + 3] == 'e')) || ((str[curr] == 'N') && (str[curr + 1] == 'O') && (str[curr + 2] == 'N') && (str[curr + 3] == 'E')))) {
+        *tag_mode = MV_TAG_TYPE_NONE;
+        curr += 4;
+    }
+	else
+		return;
+
+	if (str[curr++] != ',')
+		return;
+
+/* Parse preset mode */
+    if (!strcmp(str + curr, "per_port"))
+        *preset = MV_PRESET_PER_PORT_VLAN;
+    else if (!strcmp(str + curr, "single"))
+        *preset = MV_PRESET_SINGLE_VLAN;
+    else if (!strcmp(str + curr, "none"))
+        *preset = MV_PRESET_TRANSPARENT;
+}
+
+#endif
 static int mv_switch_probe(struct platform_device *pdev)
 {
+
+#ifdef CONFIG_OF
+	struct mv_switch_pdata *plat_data = kzalloc(sizeof(struct mv_switch_pdata), GFP_KERNEL);
+	struct device_node *np;
+	int ret;
+
+#if 0
+	const char *tag_mode = NULL;
+	const char *preset = NULL;
+#endif
+	platform_set_drvdata(pdev, plat_data);
+	np = pdev->dev.of_node;
+	ret = 0;
+	ret |= of_property_read_u32(np, "index", &plat_data->index);
+	ret |= of_property_read_u32(np, "phy_addr", &plat_data->phy_addr);
+	ret |= of_property_read_u32(np, "gbe_port", &plat_data->gbe_port);
+	ret |= of_property_read_u32(np, "cpuPort", &plat_data->switch_cpu_port);
+	ret |= of_property_read_u32(np, "vid", &plat_data->vid);
+	ret |= of_property_read_u32(np, "port_mask", &plat_data->port_mask);
+	ret |= of_property_read_u32(np, "connected_port_mask", &plat_data->connected_port_mask);
+	ret |= of_property_read_u32(np, "forced_link_port_mask", &plat_data->forced_link_port_mask);
+	ret |= of_property_read_u32(np, "mtu", &plat_data->mtu);
+	ret |= of_property_read_u32(np, "smi_scan_mode", &plat_data->smi_scan_mode);
+	ret |= of_property_read_u32(np, "qsgmii_module", &plat_data->qsgmii_module);
+	ret |= of_property_read_u32(np, "gephy_on_port", &plat_data->gephy_on_port);
+	ret |= of_property_read_u32(np, "rgmiia_on_port", &plat_data->rgmiia_on_port);
+	ret |= of_property_read_u32(np, "switch_irq", &plat_data->switch_irq);
+	ret |= of_property_read_u32(np, "is_speed_2000", &plat_data->is_speed_2000);
+
+	mv_switch_parse_cmd_line(mv_switch_str, &plat_data->preset, &plat_data->tag_mode);
+
+#if 0
+	if (!of_property_read_string(np, "tag_mode", &tag_mode)) {
+		if (!strcmp("none", tag_mode) || !strcmp("NONE", tag_mode))
+			plat_data->tag_mode = MV_TAG_TYPE_NONE;
+		else if (!strcmp("mh", tag_mode) || !strcmp("MH", tag_mode))
+			plat_data->tag_mode = MV_TAG_TYPE_MH;
+		else if (!strcmp("dsa", tag_mode) || !strcmp("DSA", tag_mode))
+			plat_data->tag_mode = MV_TAG_TYPE_DSA;
+		else
+			plat_data->tag_mode = MV_TAG_TYPE_NONE;
+	}
+
+	if (!of_property_read_string(np, "preset", &tag_mode)) {
+		if (!strcmp("none", tag_mode) || !strcmp("NONE", tag_mode))
+			plat_data->tag_mode = MV_PRESET_TRANSPARENT;
+		else if (!strcmp("per_port", tag_mode) || !strcmp("PER_PORT", tag_mode))
+			plat_data->tag_mode = MV_PRESET_SINGLE_VLAN;
+		else if (!strcmp("single", tag_mode) || !strcmp("SINGLE", tag_mode))
+			plat_data->tag_mode = MV_PRESET_PER_PORT_VLAN;
+		else
+			plat_data->tag_mode = MV_PRESET_TRANSPARENT;
+	}
+#endif
+/* paul.chen known issue on interrupt the link detect need to fix. */
+
+#else
 	struct mv_switch_pdata *plat_data = (struct mv_switch_pdata *)pdev->dev.platform_data;
+#endif /* CONFIG_OF */
+
+
 	/* load switch driver, force link on cpu port */
 	mv_switch_load(plat_data);
 
@@ -5526,6 +5750,10 @@ static const struct mv_mux_switch_ops switch_ops =  {
 	.interrupt_unmask = mv_switch_interrupt_unmask,
 };
 
+static const struct of_device_id mv_switch_match[] = {
+	{ .compatible = "marvell,mv_switch" },
+	{ }
+};
 static struct platform_driver mv_switch_driver = {
 	.probe = mv_switch_probe,
 	.remove = mv_switch_remove,
@@ -5535,6 +5763,7 @@ static struct platform_driver mv_switch_driver = {
 #endif /* CONFIG_CPU_IDLE */
 	.driver = {
 		.name = MV_SWITCH_SOHO_NAME,
+		.of_match_table = mv_switch_match,
 	},
 };
 

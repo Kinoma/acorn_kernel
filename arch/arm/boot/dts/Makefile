@@ -96,11 +96,10 @@ dtb-$(CONFIG_ARCH_MVEBU) += armada-370-db.dtb \
 	armada-370-rd.dtb \
 	armada-375-db.dtb \
 	armada-385-db.dtb \
-	armada-385-rd.dtb \
-	armada-388-rd.dtb \
 	armada-xp-db.dtb \
 	armada-xp-gp.dtb \
-	armada-xp-openblocks-ax3-4.dtb
+	armada-xp-openblocks-ax3-4.dtb \
+	armada-385-hcc.dtb
 dtb-$(CONFIG_ARCH_MXC) += \
 	imx25-karo-tx25.dtb \
 	imx25-pdk.dtb \

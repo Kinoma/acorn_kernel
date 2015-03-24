@@ -23,18 +23,29 @@ INCLUDE_DIRS	+= -I$(PLAT_DIR)/switch
 INCLUDE_DIRS	+= -I$(PLAT_DIR)/netmux
 INCLUDE_DIRS	+= -I$(PLAT_DIR)/phy
 INCLUDE_DIRS	+= -I$(srctree)/arch/arm/mach-mvebu
+ifeq ($(CONFIG_MV_INCLUDE_SWITCH),y)
+INCLUDE_DIRS   += -I$(PLAT_DIR)/$(QD_DIR)/Include
+INCLUDE_DIRS   += -I$(PLAT_DIR)/$(QD_DIR)/Include/h/msApi
+INCLUDE_DIRS   += -I$(PLAT_DIR)/$(QD_DIR)/Include/h/driver
+INCLUDE_DIRS   += -I$(PLAT_DIR)/$(QD_DIR)/Include/h/platform
+endif
 export INCLUDE_DIRS
+
+ifeq ($(CONFIG_MV_INCLUDE_SWITCH),y)
+QD_DIR:= switch/qd-dsdt-3.3
+export QD-DIR
+endif
 
 ccflags-y	+= $(INCLUDE_DIRS)
 
-obj-y	+= common/mvCommon.o common/mvStack.o common/mvDebug.o
-
-obj-$(CONFIG_MV_ETH_PP2_1)		+= common/mvList.o
-
-obj-$(CONFIG_MV_ETH_INCLUDE_PHY)	+= phy/mvEthPhy.o phy/phy_sysfs.o
 
 obj-$(CONFIG_MV_ETH_INCLUDE_NETMUX)	+= netmux/
 
 obj-$(CONFIG_MV_ETH_NETA) += neta/
 obj-$(CONFIG_MV_ETH_PP2) += pp2/
-
+obj-y += common/
+obj-y += switch/qd-dsdt-3.3/src/driver/
+obj-y += switch/qd-dsdt-3.3/src/msapi/
+obj-y += switch/qd-dsdt-3.3/src/platform/
+obj-y += switch/
+obj-y += phy/
