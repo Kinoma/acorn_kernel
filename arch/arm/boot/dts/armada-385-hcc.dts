@@ -1,10 +1,10 @@
 /*
- * Device Tree file for Marvell Armada 385 Access Point Development board
- * (DB-88F6820-AP)
+ * Device Tree file for Marvell Armada 385 development board
+ * (RD-88F6820-GP)
  *
- *  Copyright (C) 2014 Marvell
+ * Copyright (C) 2014 Marvell
  *
- * Nadav Haklai <nadavh@marvell.com>
+ * Gregory CLEMENT <gregory.clement@free-electrons.com>
  *
  * This file is dual-licensed: you can use it either under the terms
  * of the GPL or the X11 license, at your option. Note that this dual
@@ -40,32 +40,62 @@
  */
 
 /dts-v1/;
-#include "armada-385.dtsi"
-
+#include "armada-388.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 
 / {
-	model = "Marvell Armada 385 Access Point Development Board";
-	compatible = "marvell,a385-db-ap", "marvell,armada385", "marvell,armada38x";
+	model = "Marvell Armada 385 GP";
+	compatible = "marvell,a385-gp", "marvell,armada388", "marvell,armada380";
 
 	chosen {
 		bootargs = "console=ttyS0,115200";
-		stdout-path = &uart1;
+		stdout-path = &uart0;
 	};
 
 	memory {
 		device_type = "memory";
-		reg = <0x00000000 0x80000000>; /* 2GB */
+		reg = <0x00000000 0x80000000>; /* 2 GB */
 	};
 
+	dsa@0 {
+		compatible = "marvell,dsa";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dsa,ethernet = <&eth1>;
+		dsa,mii-bus = <&mdio1>;
+
+		switch@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0 0>;    /* MDIO address 0, switch 0 in tree */
+			
+			 port@0 {
+			         reg = <0>;
+				 label = "wan";
+			 };
+			 port@1 {
+			         reg = <1>;
+				 label = "lan1";
+			 };
+			 port@2 {
+			         reg = <2>;
+				 label = "lan2";
+			 };
+			 port@5 {
+			         reg = <5>;
+				 label = "cpu";
+			};
+		};
+	};
 	soc {
 		ranges = <MBUS_ID(0xf0, 0x01) 0 0xf1000000 0x100000
 			  MBUS_ID(0x01, 0x1d) 0 0xfff00000 0x100000>;
 
 		internal-regs {
-			spi1: spi@10680 {
+			spi@10600 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&spi1_pins>;
+				pinctrl-0 = <&spi0_pins>;
 				status = "okay";
 
 				spi-flash@0 {
@@ -73,26 +103,88 @@
 					#size-cells = <1>;
 					compatible = "st,m25p128";
 					reg = <0>; /* Chip select 0 */
-					spi-max-frequency = <54000000>;
+					spi-max-frequency = <50000000>;
+					m25p,fast-read;
 				};
 			};
 
-			i2c0: i2c@11000 {
+			i2c@11000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&i2c0_pins>;
 				status = "okay";
-
+				clock-frequency = <100000>;
 				/*
-				 * This bus is wired to two EEPROM
-				 * sockets, one of which holding the
-				 * board ID used by the	bootloader.
-				 * Erasing this EEPROM's content will
-				 * brick the board.
-				 * Use this bus with caution.
+				 * The EEPROM located at adresse 54 is needed
+				 * for the boot - DO NOT ERASE IT -
 				 */
+
+				expander0: pca9555@20 {
+					compatible = "nxp,pca9555";
+					pinctrl-names = "default";
+					pinctrl-0 = <&pca0_pins>;
+					interrupt-parent = <&gpio0>;
+					interrupts = <18 IRQ_TYPE_EDGE_FALLING>;
+					gpio-controller;
+					#gpio-cells = <2>;
+					interrupt-controller;
+					#interrupt-cells = <2>;
+					reg = <0x20>;
+				};
+
+				expander1: pca9555@21 {
+					compatible = "nxp,pca9555";
+					pinctrl-names = "default";
+					interrupt-parent = <&gpio0>;
+					interrupts = <18 IRQ_TYPE_EDGE_FALLING>;
+					gpio-controller;
+					#gpio-cells = <2>;
+					interrupt-controller;
+					#interrupt-cells = <2>;
+					reg = <0x21>;
+				};
+
 			};
 
-			mdio@72004 {
+			serial@12000 {
+				/*
+				 * Exported on the micro USB connector CON16
+				 * through an FTDI
+				 */
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&uart0_pins>;
+				status = "okay";
+			};
+
+			/* GE1 CON15 */
+			ethernet@30000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&ge1_rgmii_pins>;
+				status = "okay";
+				phy-mode = "rgmii-id";
+			};
+
+			/* CON4 */
+			usb@50000 {
+				vcc-supply = <&reg_usb2_0_vbus>;
+				status = "okay";
+			};
+
+			/* GE0 CON1 */
+			ethernet@70000 {
+				pinctrl-names = "default";
+				/*
+				 * The Reference Clock 0 is used to provide a
+				 * clock to the PHY
+				 */
+				pinctrl-0 = <&ge0_rgmii_pins>, <&ref_clk0_pins>;
+				status = "okay";
+				phy = <&phy0>;
+				phy-mode = "rgmii-id";
+			};
+
+
+			mdio1: mdio@72004 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&mdio_pins>;
 
@@ -100,79 +192,134 @@
 					reg = <1>;
 				};
 
-				phy1: ethernet-phy@4 {
-					reg = <4>;
-				};
-
-				phy2: ethernet-phy@6 {
-					reg = <6>;
+				phy1: ethernet-phy@0 {
+					reg = <0>;
 				};
 			};
 
-			/* UART0 is exposed through the JP8 connector */
-			uart0: serial@12000 {
+			sata@a8000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&uart0_pins>;
+				pinctrl-0 = <&sata0_pins>, <&sata1_pins>;
 				status = "okay";
+				#address-cells = <1>;
+				#size-cells = <0>;
 			};
 
-			/*
-			 * UART1 is exposed through a FTDI chip
-			 * wired to the mini-USB connector
-			 */
-			uart1: serial@12100 {
+			sata@e0000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&uart1_pins>;
+				pinctrl-0 = <&sata2_pins>, <&sata3_pins>;
 				status = "okay";
+				#address-cells = <1>;
+				#size-cells = <0>;
 			};
 
-			ethernet@30000 {
-				status = "okay";
-				phy = <&phy2>;
-				phy-mode = "sgmii";
-			};
-
-			ethernet@34000 {
-				status = "okay";
-				phy = <&phy1>;
-				phy-mode = "sgmii";
-			};
-
-			ethernet@70000 {
+			sdhci@d8000 {
 				pinctrl-names = "default";
-
-				/*
-				 * The Reference Clock 0 is used to
-				 * provide a clock to the PHY
-				 */
-				pinctrl-0 = <&ge0_rgmii_pins>, <&ref_clk0_pins>;
+				pinctrl-0 = <&sdhci_pins>;
+				cd-gpios = <&expander0 5 GPIO_ACTIVE_LOW>;
+				no-1-8-v;
+				wp-inverted;
+				bus-width = <8>;
 				status = "okay";
-				phy = <&phy0>;
-				phy-mode = "rgmii-id";
+			};
+
+			/* CON5 */
+			usb3@f0000 {
+				vcc-supply = <&reg_usb2_1_vbus>;
+				status = "okay";
+			};
+
+			/* CON7 */
+			usb3@f8000 {
+				vcc-supply = <&reg_usb3_vbus>;
+				status = "okay";
 			};
 		};
 
 		pcie-controller {
 			status = "okay";
-
 			/*
-			 * The three PCIe units are accessible through
-			 * standard mini-PCIe slots on the board.
+			 * One PCIe units is accessible through
+			 * standard PCIe slot on the board.
 			 */
 			pcie@1,0 {
 				/* Port 0, Lane 0 */
 				status = "okay";
 			};
 
+			/*
+			 * The two other PCIe units are accessible
+			 * through mini PCIe slot on the board.
+			 */
 			pcie@2,0 {
 				/* Port 1, Lane 0 */
 				status = "okay";
 			};
-
 			pcie@3,0 {
 				/* Port 2, Lane 0 */
 				status = "okay";
 			};
 		};
+
+		gpio-fan {
+			compatible = "gpio-fan";
+			gpios = <&expander1 3 GPIO_ACTIVE_HIGH>;
+			gpio-fan,speed-map = <	 0 0
+					      3000 1>;
+		};
+	};
+
+	reg_usb3_vbus: usb3-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb3-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&expander1 15 GPIO_ACTIVE_HIGH>;
+	};
+
+	reg_usb2_0_vbus: v5-vbus0 {
+		compatible = "regulator-fixed";
+		regulator-name = "v5.0-vbus0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&expander1 14 GPIO_ACTIVE_HIGH>;
+	};
+
+	reg_usb2_1_vbus: v5-vbus1 {
+		compatible = "regulator-fixed";
+		regulator-name = "v5.0-vbus1";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&expander0 4 GPIO_ACTIVE_HIGH>;
+	};
+
+	reg_usb2_1_vbus: v5-vbus1 {
+		compatible = "regulator-fixed";
+		regulator-name = "v5.0-vbus1";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&expander0 4 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&pinctrl {
+	pca0_pins: pca0_pins {
+		marvell,pins = "mpp18";
+		marvell,function = "gpio";
+	};
+};
+
+&eth1 {
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
 	};
 };
