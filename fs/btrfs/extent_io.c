@@ -2149,7 +2149,6 @@ void btrfs_free_io_failure_record(struct inode *inode, u64 start, u64 end)
 	struct extent_io_tree *failure_tree = &BTRFS_I(inode)->io_failure_tree;
 	struct io_failure_record *failrec;
 	struct extent_state *state, *next;
-
 	if (RB_EMPTY_ROOT(&failure_tree->state))
 		return;
 
@@ -2162,8 +2161,11 @@ void btrfs_free_io_failure_record(struct inode *inode, u64 start, u64 end)
 		ASSERT(state->end <= end);
 
 		next = next_state(state);
-
+		#if defined CONFIG_64BIT
 		failrec = (struct io_failure_record *)state->private;
+		#else
+		failrec = (struct io_failure_record *)((u32)state->private);
+		#endif
 		free_extent_state(state);
 		kfree(failrec);
 

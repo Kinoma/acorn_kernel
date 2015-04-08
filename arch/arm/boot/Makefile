@@ -63,7 +63,11 @@ else
   ifeq ($(CONFIG_ZBOOT_ROM),y)
     UIMAGE_LOADADDR=$(CONFIG_ZBOOT_ROM_TEXT)
   else
-    UIMAGE_LOADADDR=$(ZRELADDR)
+    ifneq ($(ZRELADDR),)
+      UIMAGE_LOADADDR=$(ZRELADDR)
+    else
+      UIMAGE_LOADADDR=0x1000000
+    endif
   endif
 endif
 
