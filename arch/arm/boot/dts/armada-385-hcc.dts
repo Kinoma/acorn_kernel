@@ -176,20 +176,6 @@
 				status = "okay";
 			};
 
-			/* GE0 CON1 */
-			ethernet@70000 {
-				pinctrl-names = "default";
-				/*
-				 * The Reference Clock 0 is used to provide a
-				 * clock to the PHY
-				 */
-				pinctrl-0 = <&ge0_rgmii_pins>, <&ref_clk0_pins>;
-				status = "okay";
-				phy = <&phy0>;
-				phy-mode = "rgmii-id";
-			};
-
-
 			mdio1: mdio@72004 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&mdio_pins>;
