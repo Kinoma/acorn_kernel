@@ -503,7 +503,8 @@ dtb-$(CONFIG_MACH_ARMADA_38X) += \
 	armada-385-hcc.dtb\
 	armada-388-db.dtb \
 	armada-388-gp.dtb \
-	armada-388-rd.dtb
+	armada-388-rd.dtb \
+	armada-380-Cube.dtb
 dtb-$(CONFIG_MACH_ARMADA_XP) += \
 	armada-xp-axpwifiap.dtb \
 	armada-xp-db.dtb \
