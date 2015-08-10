@@ -224,11 +224,11 @@
 			 * The two other PCIe units are accessible
 			 * through mini PCIe slot on the board.
 			 */
-			pcie@2,0 {
+			pcie@1,0 {
 				/* Port 1, Lane 0 */
 				status = "okay";
 			};
-			pcie@3,0 {
+			pcie@4,0 {
 				/* Port 2, Lane 0 */
 				status = "okay";
 			};
