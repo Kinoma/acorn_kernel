@@ -161,20 +161,6 @@
 				status = "okay";
 			};
 
-			serial@12100 {
-				pinctrl-names = "default";
-				pinctrl-0 = <&uart1_pins>;
-				status = "okay";
-			};
-
-			/* GE1 CON15 */
-			ethernet@30000 {
-				pinctrl-names = "default";
-				pinctrl-0 = <&ge1_rgmii_pins>;
-				status = "okay";
-				phy-mode = "rgmii-id";
-			};
-
 			/* CON4 */
 			usb@50000 {
 				vcc-supply = <&reg_usb2_0_vbus>;
