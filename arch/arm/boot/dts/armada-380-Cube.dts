@@ -159,17 +159,17 @@
 				/* Port 1, Lane 0 */
 				status = "okay";
 				mwlwifi {
-					marvell,2ghz = <0x0>;
-					marvell,chainmask = <0x2 0x2>;
-				};
+                                        marvell,2ghz = <0x0>;
+                                        marvell,chainmask = <0x2 0x2>;
+                                };
 			};
 			pcie@4,0 {
 				/* Port 2, Lane 0 */
 				status = "okay";
 				mwlwifi {
-					marvell,5ghz = <0x0>;
-					marvell,chainmask = <0x2 0x2>;
-				};
+                                        marvell,5ghz = <0x0>;
+                                        marvell,chainmask = <0x2 0x2>;
+                                };
 			};
 		};
 
