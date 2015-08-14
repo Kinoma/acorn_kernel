@@ -54,40 +54,9 @@
 
 	memory {
 		device_type = "memory";
-		reg = <0x00000000 0x80000000>; /* 2 GB */
+		reg = <0x00000000 0x20000000>; /* 512 MB */
 	};
 
-	dsa@0 {
-		compatible = "marvell,dsa";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		dsa,ethernet = <&eth1>;
-		dsa,mii-bus = <&mdio1>;
-
-		switch@0 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0 0>;    /* MDIO address 0, switch 0 in tree */
-			
-			 port@0 {
-			         reg = <0>;
-				 label = "wan";
-			 };
-			 port@1 {
-			         reg = <1>;
-				 label = "lan1";
-			 };
-			 port@2 {
-			         reg = <2>;
-				 label = "lan2";
-			 };
-			 port@5 {
-			         reg = <5>;
-				 label = "cpu";
-			};
-		};
-	};
 	soc {
 		ranges = <MBUS_ID(0xf0, 0x01) 0 0xf1000000 0x100000
 			  MBUS_ID(0x01, 0x1d) 0 0xfff00000 0x100000>;
@@ -167,30 +136,6 @@
 				status = "okay";
 			};
 
-			mdio1: mdio@72004 {
-				pinctrl-names = "default";
-				pinctrl-0 = <&mdio_pins>;
-
-				phy0: ethernet-phy@1 {
-					reg = <1>;
-				};
-
-				phy1: ethernet-phy@0 {
-					reg = <0>;
-				};
-			};
-
-
-			sdhci@d8000 {
-				pinctrl-names = "default";
-				pinctrl-0 = <&sdhci_pins>;
-				cd-gpios = <&expander0 5 GPIO_ACTIVE_LOW>;
-				no-1-8-v;
-				wp-inverted;
-				bus-width = <8>;
-				status = "okay";
-			};
-
 			/* CON5 */
 			usb3@f0000 {
 				vcc-supply = <&reg_usb2_1_vbus>;
@@ -213,19 +158,21 @@
 			pcie@1,0 {
 				/* Port 1, Lane 0 */
 				status = "okay";
+				mwlwifi {
+					marvell,2ghz = <0x0>;
+					marvell,chainmask = <0x2 0x2>;
+				};
 			};
 			pcie@4,0 {
 				/* Port 2, Lane 0 */
 				status = "okay";
+				mwlwifi {
+					marvell,5ghz = <0x0>;
+					marvell,chainmask = <0x2 0x2>;
+				};
 			};
 		};
 
-		gpio-fan {
-			compatible = "gpio-fan";
-			gpios = <&expander1 3 GPIO_ACTIVE_HIGH>;
-			gpio-fan,speed-map = <	 0 0
-					      3000 1>;
-		};
 	};
 
 	reg_usb3_vbus: usb3-vbus {
@@ -268,17 +215,10 @@
 		gpio = <&expander0 4 GPIO_ACTIVE_HIGH>;
 	};
 };
-
 &pinctrl {
 	pca0_pins: pca0_pins {
-		marvell,pins = "mpp18";
-		marvell,function = "gpio";
+	        marvell,pins = "mpp18";
+	        marvell,function = "gpio";
 	};
 };
 
-&eth1 {
-	fixed-link {
-		speed = <1000>;
-		full-duplex;
-	};
-};
